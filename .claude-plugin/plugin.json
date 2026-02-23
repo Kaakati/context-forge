@@ -1,0 +1,17 @@
+{
+  "name": "contextforge",
+  "version": "0.1.0",
+  "description": "Context-aware intelligence for Claude Code. Automatic codebase indexing, semantic RAG retrieval, and persistent cross-session memory.",
+  "author": {
+    "name": "Manifest Solutions",
+    "url": "https://github.com/manifest-solutions"
+  },
+  "license": "MIT",
+  "keywords": [
+    "context-engineering",
+    "rag",
+    "knowledge-graph",
+    "memory",
+    "codebase-awareness"
+  ]
+}
