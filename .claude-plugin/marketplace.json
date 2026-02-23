@@ -1,0 +1,36 @@
+{
+  "name": "context-forge",
+  "owner": {
+    "name": "Kaakati",
+    "url": "https://github.com/Kaakati"
+  },
+  "metadata": {
+    "description": "ContextForge — Context-aware intelligence for Claude Code. Automatic codebase indexing, semantic RAG retrieval, and persistent cross-session memory.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "contextforge",
+      "source": ".",
+      "description": "Context-aware intelligence for Claude Code. Automatic codebase indexing, semantic RAG retrieval, knowledge graph, and persistent cross-session memory.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Manifest Solutions",
+        "url": "https://github.com/manifest-solutions"
+      },
+      "homepage": "https://github.com/Kaakati/context-forge",
+      "repository": "https://github.com/Kaakati/context-forge",
+      "license": "MIT",
+      "keywords": [
+        "context-engineering",
+        "rag",
+        "knowledge-graph",
+        "memory",
+        "codebase-awareness",
+        "indexing",
+        "conventions"
+      ],
+      "category": "productivity"
+    }
+  ]
+}
