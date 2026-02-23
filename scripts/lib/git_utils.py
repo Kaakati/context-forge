@@ -14,6 +14,32 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 
+def is_git_repo(cwd: Optional[Path] = None) -> bool:
+    """Check whether the given directory is inside a git repository.
+
+    Uses ``git rev-parse --is-inside-work-tree`` which handles nested
+    repos and worktrees correctly. Returns False silently if git is
+    not installed or the directory is not a repo.
+
+    Args:
+        cwd: Directory to check. Defaults to the current working directory.
+
+    Returns:
+        True if the directory is inside a git work tree, False otherwise.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            cwd=str(cwd) if cwd else None,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        return result.returncode == 0 and result.stdout.strip() == "true"
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return False
+
+
 def run_git(args: List[str], cwd: Optional[Path] = None) -> Optional[str]:
     """Run a git command and return its stdout.
 
@@ -35,7 +61,7 @@ def run_git(args: List[str], cwd: Optional[Path] = None) -> Optional[str]:
             timeout=30,
         )
         if result.returncode != 0:
-            logger.warning(
+            logger.debug(
                 "git %s failed (rc=%d): %s",
                 " ".join(args),
                 result.returncode,

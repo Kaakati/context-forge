@@ -1,15 +1,15 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "context-forge",
-  "description": "ContextForge — Context-aware intelligence for Claude Code. Automatic codebase indexing, semantic RAG retrieval, and persistent cross-session memory.",
+  "description": "ContextForge — Context-aware intelligence for Claude Code. Automatic codebase indexing, GPU-accelerated semantic RAG retrieval, and persistent cross-session memory.",
   "owner": {
     "name": "Kaakati"
   },
   "plugins": [
     {
       "name": "contextforge",
-      "description": "Context-aware intelligence for Claude Code. Automatic codebase indexing, semantic RAG retrieval, knowledge graph, and persistent cross-session memory.",
-      "version": "0.1.0",
+      "description": "Context-aware intelligence for Claude Code. Automatic codebase indexing, GPU-accelerated semantic RAG retrieval, knowledge graph, and persistent cross-session memory.",
+      "version": "0.2.0",
       "author": {
         "name": "Manifest Solutions"
       },

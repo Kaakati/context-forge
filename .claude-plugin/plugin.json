@@ -1,7 +1,7 @@
 {
   "name": "contextforge",
-  "version": "0.1.0",
-  "description": "Context-aware intelligence for Claude Code. Automatic codebase indexing, semantic RAG retrieval, and persistent cross-session memory.",
+  "version": "0.2.0",
+  "description": "Context-aware intelligence for Claude Code. Automatic codebase indexing, GPU-accelerated semantic RAG retrieval, and persistent cross-session memory.",
   "author": {
     "name": "Manifest Solutions",
     "url": "https://github.com/manifest-solutions"

@@ -10,12 +10,34 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from lib.git_utils import (
+    is_git_repo,
     run_git,
     get_current_commit,
     get_changed_files,
     load_watermark,
     save_watermark,
 )
+
+
+class TestIsGitRepo:
+    def test_true_when_git_repo(self):
+        with mock.patch("subprocess.run") as mock_run:
+            mock_run.return_value = mock.Mock(returncode=0, stdout="true\n", stderr="")
+            assert is_git_repo() is True
+
+    def test_false_when_not_git_repo(self):
+        with mock.patch("subprocess.run") as mock_run:
+            mock_run.return_value = mock.Mock(returncode=128, stdout="", stderr="fatal: not a git repository")
+            assert is_git_repo() is False
+
+    def test_false_when_git_not_installed(self):
+        with mock.patch("subprocess.run", side_effect=FileNotFoundError):
+            assert is_git_repo() is False
+
+    def test_false_on_timeout(self):
+        import subprocess
+        with mock.patch("subprocess.run", side_effect=subprocess.TimeoutExpired("git", 5)):
+            assert is_git_repo() is False
 
 
 class TestRunGit:

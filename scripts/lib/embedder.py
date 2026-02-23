@@ -16,11 +16,34 @@ logger = logging.getLogger(__name__)
 _model = None
 
 
+def _detect_device() -> str:
+    """Detect the best available compute device for embeddings.
+
+    Checks for CUDA (NVIDIA GPU) and MPS (Apple Silicon) via torch,
+    falling back to CPU if neither is available or torch is not installed.
+    """
+    try:
+        import torch
+    except ImportError:
+        return "cpu"
+
+    try:
+        if torch.cuda.is_available():
+            return "cuda"
+        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            return "mps"
+    except Exception:
+        pass
+
+    return "cpu"
+
+
 def _load_model(config: Optional[Dict[str, Any]] = None):
     """Lazy-load the SentenceTransformer model.
 
-    Uses ``all-MiniLM-L6-v2`` by default on CPU, with the model cache
-    stored in ``{data_dir}/models/``.
+    Uses ``all-MiniLM-L6-v2`` by default on the best available device
+    (CUDA > MPS > CPU), with the model cache stored in
+    ``{data_dir}/models/``.
 
     Args:
         config: Optional configuration dict. Supports keys under
@@ -38,20 +61,22 @@ def _load_model(config: Optional[Dict[str, Any]] = None):
     try:
         from sentence_transformers import SentenceTransformer
     except ImportError:
-        logger.warning(
-            "sentence-transformers is not installed. "
-            "Embedding features will be disabled."
+        logger.debug(
+            "sentence-transformers is not installed — "
+            "embedding features disabled."
         )
         return None
 
     model_name = "all-MiniLM-L6-v2"
-    device = "cpu"
+    device = _detect_device()
     cache_folder = None
 
     if config:
         embedding_config = config.get("embedding", {})
         model_name = embedding_config.get("model", model_name)
-        device = embedding_config.get("device", device)
+        configured_device = embedding_config.get("device")
+        if configured_device and configured_device != "auto":
+            device = configured_device
 
         data_dir = config.get("data_dir")
         if data_dir:
@@ -145,7 +170,7 @@ def cosine_similarity(query_vec, corpus_vecs):
     try:
         import numpy as np
     except ImportError:
-        logger.warning("numpy is not installed. Cannot compute similarity.")
+        logger.debug("numpy is not installed — cannot compute similarity.")
         return None
 
     query_vec = np.asarray(query_vec)

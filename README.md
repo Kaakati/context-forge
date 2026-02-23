@@ -37,7 +37,7 @@ bash /path/to/context_forge/scripts/bootstrap.sh
 When a Claude Code session starts or resumes, ContextForge:
 - Indexes new/changed files since the last session (incremental via git)
 - Chunks source files using tree-sitter AST parsing (with regex and sliding-window fallbacks)
-- Embeds code chunks using `all-MiniLM-L6-v2` sentence transformer
+- Embeds code chunks using `all-MiniLM-L6-v2` sentence transformer (GPU-accelerated when available)
 - Builds a lightweight knowledge graph of file relationships
 - Injects an architectural summary and memory context into the session
 
@@ -64,6 +64,26 @@ Modified files are re-chunked and re-embedded in real time, keeping the RAG inde
 | `/contextforge:context-status` | Show index state, file counts, conventions |
 | `/contextforge:context-rebuild` | Force full re-index of the codebase |
 | `/contextforge:context-memory` | Manage persistent memory (list, clear, forget) |
+
+## GPU Acceleration
+
+ContextForge automatically detects and uses the best available compute device for embeddings:
+
+| Device | When used |
+|--------|-----------|
+| **CUDA** | NVIDIA GPU with CUDA drivers detected |
+| **MPS** | Apple Silicon Mac (M1/M2/M3/M4) |
+| **CPU** | Fallback when no GPU is available |
+
+No configuration needed — detection is automatic. To force a specific device, set `embedding.device` in your config:
+
+```json
+{
+  "embedding": {
+    "device": "cpu"
+  }
+}
+```
 
 ## Configuration
 

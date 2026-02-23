@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lib.platform_utils import get_project_dir, get_data_dir, get_plugin_root, ensure_data_dir
 from lib.config import load_config
 from lib.db import init_embeddings_db, init_memory_db, get_connection
-from lib.git_utils import get_current_commit, get_changed_files, load_watermark, save_watermark
+from lib.git_utils import is_git_repo, get_current_commit, get_changed_files, load_watermark, save_watermark
 from lib.indexer import chunk_file
 from lib.embedder import embed_texts
 from lib.graph import load_graph, save_graph, update_graph_for_file, remove_file_from_graph, generate_summary
@@ -144,60 +144,74 @@ def main():
         init_embeddings_db(db_emb)
         init_memory_db(db_mem)
 
-        # Ensure .contextforge/ is in .gitignore
-        ensure_gitignore(project_dir)
-
         # Load configuration
         config = load_config(plugin_root, data_dir)
         config["data_dir"] = str(data_dir)  # For embedder model cache
 
-        # Determine what needs indexing
-        watermark = load_watermark(data_dir)
-        current_commit = get_current_commit(str(project_dir))
+        # Check if we're in a git repository
+        in_git = is_git_repo(project_dir)
 
+        # Only touch .gitignore if the project uses git
+        if in_git:
+            ensure_gitignore(project_dir)
+
+        # Determine what needs indexing
         graph = load_graph(data_dir)
         total_chunks = 0
+        current_commit = None
 
-        if watermark.get("commit") and current_commit:
-            # Incremental index
-            changes = get_changed_files(watermark["commit"], str(project_dir))
-            modified = changes.get("modified", [])
-            deleted = changes.get("deleted", [])
+        if in_git:
+            watermark = load_watermark(data_dir)
+            current_commit = get_current_commit(str(project_dir))
 
-            if modified:
-                # Remove old chunks for modified files
+            if watermark.get("commit") and current_commit:
+                # Incremental index
+                changes = get_changed_files(watermark["commit"], str(project_dir))
+                modified = changes.get("modified", [])
+                deleted = changes.get("deleted", [])
+
+                if modified:
+                    # Remove old chunks for modified files
+                    with get_connection(db_emb) as conn:
+                        for fpath in modified:
+                            conn.execute("DELETE FROM code_chunks WHERE file_path = ?", (fpath,))
+
+                    # Re-index modified files
+                    full_paths = []
+                    for rel in modified:
+                        fp = project_dir / rel
+                        if fp.exists():
+                            full_paths.append(fp)
+                            try:
+                                content = fp.read_text(encoding="utf-8", errors="replace")
+                                update_graph_for_file(graph, rel, content)
+                            except OSError:
+                                pass
+
+                    total_chunks = index_files(full_paths, project_dir, data_dir, config)
+
+                if deleted:
+                    remove_deleted_files(deleted, data_dir, graph)
+            else:
+                # First run in a git repo — full index
+                current_commit = current_commit  # may still be None if no commits yet
+                all_files = get_all_files(project_dir, config)
                 with get_connection(db_emb) as conn:
-                    for fpath in modified:
-                        conn.execute("DELETE FROM code_chunks WHERE file_path = ?", (fpath,))
-
-                # Re-index modified files
-                full_paths = []
-                for rel in modified:
-                    fp = project_dir / rel
-                    if fp.exists():
-                        full_paths.append(fp)
-                        try:
-                            content = fp.read_text(encoding="utf-8", errors="replace")
-                            update_graph_for_file(graph, rel, content)
-                        except OSError:
-                            pass
-
-                total_chunks = index_files(full_paths, project_dir, data_dir, config)
-
-            if deleted:
-                remove_deleted_files(deleted, data_dir, graph)
-
+                    conn.execute("DELETE FROM code_chunks")
+                total_chunks = index_files(all_files, project_dir, data_dir, config)
+                for fpath in all_files:
+                    try:
+                        rel = fpath.relative_to(project_dir).as_posix()
+                        content = fpath.read_text(encoding="utf-8", errors="replace")
+                        update_graph_for_file(graph, rel, content)
+                    except OSError:
+                        continue
         else:
-            # Full index — first run or no git
+            # No git — always do a full index
             all_files = get_all_files(project_dir, config)
-
-            # Clear existing data for full re-index
             with get_connection(db_emb) as conn:
                 conn.execute("DELETE FROM code_chunks")
-
             total_chunks = index_files(all_files, project_dir, data_dir, config)
-
-            # Build full graph
             for fpath in all_files:
                 try:
                     rel = fpath.relative_to(project_dir).as_posix()
@@ -208,7 +222,7 @@ def main():
 
         # Save graph and watermark
         save_graph(data_dir, graph)
-        if current_commit:
+        if in_git and current_commit:
             save_watermark(data_dir, current_commit)
 
         # Generate context for Claude
