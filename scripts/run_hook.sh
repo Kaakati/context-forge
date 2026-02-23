@@ -32,11 +32,15 @@ fi
 if [ ! -f "$VENV_PYTHON" ]; then
     if [ "$SCRIPT_NAME" = "session_start.py" ]; then
         # Find system Python
-        if command -v python3 &>/dev/null; then
+        # On Windows, "python3" may be a Store alias that doesn't actually work,
+        # so verify with --version before trusting it
+        SYS_PYTHON=""
+        if command -v python3 &>/dev/null && python3 --version &>/dev/null; then
             SYS_PYTHON="python3"
-        elif command -v python &>/dev/null; then
+        elif command -v python &>/dev/null && python --version &>/dev/null; then
             SYS_PYTHON="python"
-        else
+        fi
+        if [ -z "$SYS_PYTHON" ]; then
             echo '{"error": "Python not found"}' >&2
             exit 0
         fi
